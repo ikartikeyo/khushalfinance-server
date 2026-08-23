@@ -163,9 +163,8 @@ export const validateContact = [
 export const validateLogin = [
   body('email')
     .trim()
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Valid email is required'),
+    .notEmpty()
+    .withMessage('Username or email is required'),
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
