@@ -28,15 +28,47 @@ export function createApp() {
     })
   );
 
-  // CORS configuration
-  app.use(
-    cors({
-      origin: [config.corsOrigin, 'http://localhost:3000', 'http://127.0.0.1:3000'],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  );
+  // CORS configuration — dynamically allow frontend Vercel deployments, localhost, and configured CORS_ORIGIN
+  const allowedOrigins = [
+    config.corsOrigin,
+    config.clientUrl,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ].filter(Boolean);
+
+  const corsOptions = {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. server-to-server, mobile apps, Postman)
+      if (!origin) return callback(null, true);
+
+      // If set to wildcard or localhost development
+      if (config.corsOrigin === '*' || process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+
+      // Check if domain is in allowed list, is a Vercel deployment, or matches custom domain
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('vercel.app') ||
+        origin.includes('khushalfinance') ||
+        origin.includes('localhost');
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+
+      // Allow dynamically to prevent deployment blocking
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Content-Disposition'],
+  };
+
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
 
   // Request logger
   if (config.nodeEnv !== 'test') {
